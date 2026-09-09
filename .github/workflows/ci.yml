@@ -1,0 +1,48 @@
+name: Build Latest Task
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install dependencies
+      run: sudo apt-get install -y cmake build-essential
+
+    - name: Find the latest changed task folder
+      id: finder
+      run: |
+        LATEST_FOLDER=$(git log --pretty=format: --name-only --diff-filter=AM | \
+                        grep -E '^lab[0-9]+/[0-9]+/' | \
+                        sort -u | \
+                        tail -1 | \
+                        xargs dirname)
+        
+        if [ -z "$LATEST_FOLDER" ]; then
+          echo "folder=none" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        echo "Latest changed folder: $LATEST_FOLDER"
+        echo "folder=$LATEST_FOLDER" >> $GITHUB_OUTPUT
+
+    - name: Build and Test
+      if: steps.finder.outputs.folder != 'none'
+      run: |
+        cd ${{ steps.finder.outputs.folder }}
+        
+        mkdir -p build && cd build
+        cmake ../
+        make
+        
+        ./task < ../tests/input.txt > ../tests/output.actual
+        diff ../tests/output.txt ../tests/output.actual
