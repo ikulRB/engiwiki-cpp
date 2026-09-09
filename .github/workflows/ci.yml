@@ -38,11 +38,9 @@ jobs:
     - name: Build and Test
       if: steps.finder.outputs.folder != 'none'
       run: |
-        cd ${{ steps.finder.outputs.folder }}
-        
+        cd ${{ steps.finder.outputs.folder }}   # ← УБИРАЕМ /tests
         mkdir -p build && cd build
         cmake ../
         make
-        
         ./task < ../tests/input.txt > ../tests/output.actual
         diff ../tests/output.txt ../tests/output.actual
