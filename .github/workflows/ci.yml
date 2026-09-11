@@ -22,7 +22,7 @@ jobs:
       id: finder
       run: |
         LATEST_FOLDER=$(git log --pretty=format: --name-only --diff-filter=AM | \
-                        grep -E '^lab[0-9]+/[0-9]+/' | \
+                        grep -E '^lab[0-9]+/[0-9]+/[^/]+$' | \
                         sort -u | \
                         tail -1 | \
                         xargs dirname)
