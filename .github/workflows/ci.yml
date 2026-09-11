@@ -35,12 +35,53 @@ jobs:
         echo "Latest changed folder: $LATEST_FOLDER"
         echo "folder=$LATEST_FOLDER" >> $GITHUB_OUTPUT
 
-    - name: Build and Test
+    - name: Build
       if: steps.finder.outputs.folder != 'none'
       run: |
         cd ${{ steps.finder.outputs.folder }}
         mkdir -p build && cd build
         cmake ../
         make
-        ./task < ../tests/input.txt > ../tests/output.actual
-        diff ../tests/output.txt ../tests/output.actual
+
+    - name: Test each line
+      if: steps.finder.outputs.folder != 'none'
+      run: |
+        cd ${{ steps.finder.outputs.folder }}
+        
+        INPUT="tests/input.txt"
+        OUTPUT="tests/output.txt"
+        EXEC="./build/task"
+        
+        N_IN=$(wc -l < $INPUT)
+        N_OUT=$(wc -l < $OUTPUT)
+        
+        if [ "$N_IN" != "$N_OUT" ]; then
+          echo "❌ Количество строк в input.txt ($N_IN) и output.txt ($N_OUT) не совпадает"
+          exit 1
+        fi
+        
+        FAILED=0
+        for I in $(seq 1 $N_IN); do
+          INPUT_LINE=$(sed -n "${I}p" $INPUT)
+          EXPECTED_LINE=$(sed -n "${I}p" $OUTPUT)
+          
+          echo "=== Тест $I ==="
+          echo "Вход: $INPUT_LINE"
+          echo "Ожидается: $EXPECTED_LINE"
+          
+          ACTUAL=$(echo "$INPUT_LINE" | $EXEC)
+          echo "Получено: $ACTUAL"
+          
+          if [ "$ACTUAL" = "$EXPECTED_LINE" ]; then
+            echo "✅ OK"
+          else
+            echo "❌ FAILED"
+            FAILED=1
+          fi
+          echo ""
+        done
+        
+        if [ $FAILED -eq 1 ]; then
+          echo "Один или несколько тестов провалены"
+          exit 1
+        fi
